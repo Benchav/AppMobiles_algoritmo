@@ -9,6 +9,8 @@ Responsabilidades:
   - Normalizar el año universitario a valor numérico.
 """
 
+import unicodedata
+
 import pandas as pd
 from src.config import get_area_from_major, normalize_string
 
@@ -43,7 +45,7 @@ def load_and_clean_data(filepath: str) -> pd.DataFrame:
         df = df.drop_duplicates(subset=['_nombre_norm'], keep='last')
         eliminados_nombre = antes - len(df)
         if eliminados_nombre > 0:
-            print(f"  ⚠  Duplicados por nombre completo eliminados: {eliminados_nombre}")
+            print(f"  [WARN] Duplicados por nombre completo eliminados: {eliminados_nombre}")
         df = df.drop(columns=['_nombre_norm'])
 
     # 4. Limpieza adicional por carnet (si existe y no está vacío)
@@ -57,13 +59,26 @@ def load_and_clean_data(filepath: str) -> pd.DataFrame:
         df = pd.concat([df_sinNA, df_conNA], ignore_index=True)
         eliminados_carnet = antes - len(df)
         if eliminados_carnet > 0:
-            print(f"  ⚠  Duplicados por número de carnet eliminados: {eliminados_carnet}")
+            print(f"  [WARN] Duplicados por numero de carnet eliminados: {eliminados_carnet}")
         df = df.drop(columns=['_carnet_norm'])
 
     total_limpio = len(df)
-    print(f"  ✔  Registros originales: {total_raw}  →  Registros únicos: {total_limpio}")
+    print(f"  [OK] Registros originales: {total_raw}  ->  Registros unicos: {total_limpio}")
 
     # 5. Enriquecer datos
+    # Sanitize: remove Mathematical Italic Unicode block characters (e.g. from copy-paste in form)
+    def _sanitize(val):
+        if not isinstance(val, str):
+            return val
+        return ''.join(
+            ch if ord(ch) < 0x1D000 or ord(ch) > 0x1D7FF else
+            unicodedata.normalize('NFKD', ch).encode('ASCII', 'ignore').decode('utf-8') or ch
+            for ch in val
+        ).strip()
+
+    for col in df.select_dtypes(include='object').columns:
+        df[col] = df[col].apply(_sanitize)
+
     df['Carrera_Normalizada'] = df['Carrera'].apply(
         lambda x: str(x).strip() if pd.notnull(x) else 'Desconocida'
     )

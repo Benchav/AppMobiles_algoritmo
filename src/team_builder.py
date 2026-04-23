@@ -17,109 +17,104 @@ import pandas as pd
 from src.config import AREA_SISTEMAS, AREA_INGENIERIA, AREA_ECONOMICAS, AREA_HUMANIDADES
 
 
-def _get_col(df: pd.DataFrame, attr: str, fallback: str) -> str:
-    """Obtiene el nombre de columna guardado en attrs o usa el fallback."""
-    return df.attrs.get(attr, fallback)
-
-
 def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     """
     Genera equipos completos de 5 integrantes siguiendo las reglas multidisciplinarias.
+    Los tres primeros roles (2×Sistemas + 1×OtraIng) son obligatorios para formar equipo.
+    Económicas y Humanidades se agregan si hay disponibles.
+
     Retorna un DataFrame con todos los equipos y sus integrantes.
     """
 
-    nombre_col = _get_col(df, 'nombre_col', 'Nombre')
-    carnet_col  = _get_col(df, 'carnet_col', 'Carnet')
+    nombre_col = df.attrs.get('nombre_col', 'Nombre')
+    carnet_col  = df.attrs.get('carnet_col', 'Carnet')
 
-    # ── Pools por área ──────────────────────────────────────────────────────────
+    # ── Pools por área (aleatorizado) ────────────────────────────────────────
     pool_sis = (
         df[(df['Area'] == AREA_SISTEMAS) & (df['Año_Num'].isin([4, 5]))]
-        .copy()
-        .sample(frac=1)          # aleatorizar
-        .reset_index(drop=True)
+        .copy().sample(frac=1).reset_index(drop=True)
     )
     pool_ing = (
         df[df['Area'] == AREA_INGENIERIA]
-        .copy()
-        .sample(frac=1)
-        .reset_index(drop=True)
+        .copy().sample(frac=1).reset_index(drop=True)
     )
     pool_eco = (
         df[df['Area'] == AREA_ECONOMICAS]
-        .copy()
-        .sample(frac=1)
-        .reset_index(drop=True)
+        .copy().sample(frac=1).reset_index(drop=True)
     )
     pool_hum = (
         df[df['Area'] == AREA_HUMANIDADES]
-        .copy()
-        .sample(frac=1)
-        .reset_index(drop=True)
+        .copy().sample(frac=1).reset_index(drop=True)
     )
 
-    print(f"\n  📊 Disponibles por área:")
-    print(f"     • Sistemas de Información (4to/5to): {len(pool_sis)}")
-    print(f"     • Otra Ingeniería:                   {len(pool_ing)}")
-    print(f"     • Ciencias Económicas:               {len(pool_eco)}")
-    print(f"     • Humanidades y Educación:           {len(pool_hum)}")
+    print(f"\n  [INFO] Disponibles por area:")
+    print(f"     - Sistemas de Informacion (4to/5to): {len(pool_sis)}")
+    print(f"     - Otra Ingenieria:                   {len(pool_ing)}")
+    print(f"     - Ciencias Economicas:               {len(pool_eco)}")
+    print(f"     - Humanidades y Educacion:           {len(pool_hum)}")
 
-    # ── Iteradores por área ─────────────────────────────────────────────────────
-    it_sis = iter(pool_sis.itertuples(index=False))
-    it_ing = iter(pool_ing.itertuples(index=False))
-    it_eco = iter(pool_eco.itertuples(index=False))
-    it_hum = iter(pool_hum.itertuples(index=False))
+    # ── Iteración por filas con índice entero ────────────────────────────────
+    idx_sis = 0
+    idx_ing = 0
+    idx_eco = 0
+    idx_hum = 0
 
-    def _next(it):
-        try:
-            return next(it)
-        except StopIteration:
-            return None
-
-    # ── Formación de equipos ────────────────────────────────────────────────────
     registros = []
     equipo_num = 1
 
-    while True:
-        s1 = _next(it_sis)
-        s2 = _next(it_sis)
-        ing = _next(it_ing)
+    def get_val(pool, idx, col):
+        """Lee un valor de forma segura, retorna '' si columna no existe."""
+        try:
+            return pool.at[idx, col]
+        except (KeyError, IndexError):
+            return ''
 
-        # El equipo es válido solo si se cumplen los tres roles obligatorios
-        if s1 is None or s2 is None or ing is None:
-            break
+    while idx_sis + 1 < len(pool_sis) and idx_ing < len(pool_ing):
+        # Los tres roles obligatorios
+        candidatos = [
+            (pool_sis, idx_sis),
+            (pool_sis, idx_sis + 1),
+            (pool_ing, idx_ing),
+        ]
+        idx_sis += 2
+        idx_ing += 1
 
-        eco = _next(it_eco)
-        hum = _next(it_hum)
+        # Roles opcionales (pero deseables)
+        if idx_eco < len(pool_eco):
+            candidatos.append((pool_eco, idx_eco))
+            idx_eco += 1
 
-        integrantes = [s1, s2, ing]
-        if eco is not None:
-            integrantes.append(eco)
-        if hum is not None:
-            integrantes.append(hum)
+        if idx_hum < len(pool_hum):
+            candidatos.append((pool_hum, idx_hum))
+            idx_hum += 1
 
         nombre_equipo = f"Equipo {equipo_num}"
 
-        for idx_miembro, row in enumerate(integrantes, start=1):
+        for miembro_num, (pool, pidx) in enumerate(candidatos, start=1):
             registros.append({
-                'Equipo':   nombre_equipo,
-                '#':        idx_miembro,
-                'Nombre':   getattr(row, nombre_col.replace(' ', '_'), getattr(row, '_7', '')),
-                'Carnet':   getattr(row, carnet_col.replace(' ', '_'), getattr(row, '_6', '')),
-                'Carrera':  row.Carrera_Normalizada,
-                'Área':     row.Area,
-                'Año':      row.Año,
+                'Equipo':  nombre_equipo,
+                '#':       miembro_num,
+                'Nombre':  get_val(pool, pidx, nombre_col),
+                'Carnet':  get_val(pool, pidx, carnet_col),
+                'Carrera': get_val(pool, pidx, 'Carrera_Normalizada'),
+                'Área':    get_val(pool, pidx, 'Area'),
+                'Año':     get_val(pool, pidx, 'Año'),
             })
 
         equipo_num += 1
 
-    total_equipos = equipo_num - 1
-    total_asignados = sum(1 for r in registros)
-    print(f"\n  ✅ Equipos conformados: {total_equipos}  |  Estudiantes asignados: {total_asignados}")
+    total_equipos  = equipo_num - 1
+    total_asignados = len(registros)
+    print(f"\n  [OK] Equipos conformados: {total_equipos}  |  Estudiantes asignados: {total_asignados}")
 
-    # Advertencias si alguna área se agotó antes de terminar
-    if _next(it_eco) is None and len(pool_eco) == 0:
-        print("  ⚠  Sin estudiantes de Ciencias Económicas — equipos formados sin ese rol.")
-    if _next(it_hum) is None and len(pool_hum) < total_equipos:
-        print(f"  ⚠  Estudiantes de Humanidades insuficientes para todos los equipos.")
+    if len(pool_eco) == 0:
+        print("  [WARN] Sin estudiantes de Ciencias Economicas — equipos con 4 integrantes base.")
+    elif idx_eco < total_equipos:
+        print(f"  [WARN] Economicas cubrieron {idx_eco}/{total_equipos} equipos.")
+
+    if len(pool_hum) == 0:
+        print("  [WARN] Sin estudiantes de Humanidades — equipos sin ese rol.")
+    elif idx_hum < total_equipos:
+        print(f"  [WARN] Humanidades cubrieron {idx_hum}/{total_equipos} equipos.")
 
     return pd.DataFrame(registros)
