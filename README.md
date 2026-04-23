@@ -1,5 +1,8 @@
 # Concurso Multidisciplinario de Aplicaciones Moviles 2026 - Algoritmo de Equipos
 
+meter 2 de sistemas y 2 ingenieros mas por cada equipo + uno de ciencias economicas y 1 de humanidades
+
+
 Este proyecto automatiza la conformacion de equipos de trabajo multidisciplinarios garantizando un balance equitativo de conocimientos y areas de especialidad academica. El algoritmo ingiere un archivo CSV con las inscripciones, limpia y normaliza los datos, y distribuye a los estudiantes en equipos de hasta 5 integrantes bajo reglas de negocio estrictas.
 
 --- del numero 90 en adelante son datos sinteticos para completar el archivo---

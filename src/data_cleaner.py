@@ -52,6 +52,16 @@ MAPEO_CANONICO = [
       'matematica', 'fisica'],
      'Fisica y Matematicas'),
 
+    # ── Ciencias Economicas
+    (['contadur', 'contabilid', 'fianza', 'finanza'],
+     'Contaduria Publica y Finanzas'),
+
+    (['administracion', 'empresa'],
+     'Administracion de Empresas'),
+
+    (['mercadotecnia', 'mercadeo', 'marketing'],
+     'Mercadotecnia'),
+
     # ── Sistemas de Información
     (['sistema', 'informatico', 'informatica'],
      'Ingenieria en Sistemas de Informacion'),
