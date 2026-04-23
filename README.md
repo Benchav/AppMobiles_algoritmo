@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ### 2. Preparacion de Datos
 Verifica que el archivo de inscripciones en formato .csv se encuentre dentro de la carpeta data/.
 
-**Nota importante:** Si vas a actualizar o agregar un nuevo archivo de inscripciones, este debe ir obligatoriamente dentro de la carpeta `data/`. Debes **reemplazar el archivo existente** y asegurarte de que el nuevo archivo tenga exactamente el **mismo nombre** que el original para que el algoritmo pueda encontrarlo.
+## Nota importante: Si vas a actualizar o agregar un nuevo archivo de inscripciones, este debe ir obligatoriamente dentro de la carpeta `data/`. Debes **reemplazar el archivo existente** y asegurarte de que el nuevo archivo tenga exactamente el **mismo nombre** que el original para que el algoritmo pueda encontrarlo.
 
 ### 3. Ejecucion del Algoritmo
 Para iniciar el pipeline completo de limpieza, agrupacion y exportacion, ejecuta:
