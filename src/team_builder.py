@@ -87,18 +87,11 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     print(f"  Equipos base   (min 3 integrantes) posibles: {equipos_base_posibles}")
 
     # ── Formacion de equipos ──────────────────────────────────────────────────
-    registros   = []
-    equipo_num  = 1
+    equipos_list = []
     idx_sis = 0
     idx_ing = 0
     idx_eco = 0
     idx_hum = 0
-
-    def get_val(pool: pd.DataFrame, idx: int, col: str):
-        try:
-            return pool.at[idx, col]
-        except (KeyError, IndexError):
-            return ''
 
     while idx_sis + 1 < len(pool_sis) and idx_ing < len(pool_ing):
 
@@ -121,9 +114,43 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
             candidatos.append((pool_hum, idx_hum))
             idx_hum += 1
 
-        nombre_equipo = f"Equipo {equipo_num}"
+        equipos_list.append(candidatos)
 
-        for miembro_num, (pool, pidx) in enumerate(candidatos, start=1):
+    # Recolectar a los estudiantes sobrantes
+    leftovers = []
+    while idx_sis < len(pool_sis):
+        leftovers.append((pool_sis, idx_sis))
+        idx_sis += 1
+    while idx_ing < len(pool_ing):
+        leftovers.append((pool_ing, idx_ing))
+        idx_ing += 1
+    while idx_eco < len(pool_eco):
+        leftovers.append((pool_eco, idx_eco))
+        idx_eco += 1
+    while idx_hum < len(pool_hum):
+        leftovers.append((pool_hum, idx_hum))
+        idx_hum += 1
+
+    # Rellenar los equipos base para llegar a 5 si hay estudiantes sobrantes
+    for eq in equipos_list:
+        while len(eq) < 5 and leftovers:
+            eq.append(leftovers.pop(0))
+
+    # Formar grupos nuevos con el resto (de hasta 5, y el ultimo los que queden)
+    while leftovers:
+        equipos_list.append(leftovers[:5])
+        leftovers = leftovers[5:]
+
+    def get_val(pool: pd.DataFrame, idx: int, col: str):
+        try:
+            return pool.at[idx, col]
+        except (KeyError, IndexError):
+            return ''
+
+    registros = []
+    for i, eq in enumerate(equipos_list, start=1):
+        nombre_equipo = f"Equipo {i}"
+        for miembro_num, (pool, pidx) in enumerate(eq, start=1):
             registros.append({
                 'Equipo':  nombre_equipo,
                 '#':       miembro_num,
@@ -134,7 +161,7 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
                 'Año':     get_val(pool, pidx, 'Año'),
             })
 
-        equipo_num += 1
+    equipo_num = len(equipos_list) + 1
 
     # ── Reporte final ─────────────────────────────────────────────────────────
     total_equipos    = equipo_num - 1

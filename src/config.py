@@ -1,11 +1,20 @@
 import os
+import glob
 import unicodedata
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'datos')
 
-INPUT_FILE = os.path.join(DATA_DIR, 'InscripciónConcurso Multidisciplinario de Aplicaciones Móviles 2026(1-89).csv')
+def _find_input_file():
+    csv_files = glob.glob(os.path.join(DATA_DIR, '*.csv'))
+    for file in csv_files:
+        basename = os.path.basename(file)
+        if basename not in ['datos_limpios.csv', 'conteo_estudiantes.csv']:
+            return file
+    return None
+
+INPUT_FILE = _find_input_file()
 OUTPUT_TEAMS_FILE = os.path.join(OUTPUT_DIR, 'equipos_conformados.xlsx')
 OUTPUT_COUNTS_FILE = os.path.join(OUTPUT_DIR, 'conteo_estudiantes.csv')
 CLEANED_FILE = os.path.join(DATA_DIR, 'datos_limpios.csv')
