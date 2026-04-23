@@ -8,6 +8,7 @@ OUTPUT_DIR = os.path.join(BASE_DIR, 'datos')
 INPUT_FILE = os.path.join(DATA_DIR, 'InscripciónConcurso Multidisciplinario de Aplicaciones Móviles 2026(1-89).csv')
 OUTPUT_TEAMS_FILE = os.path.join(OUTPUT_DIR, 'equipos_conformados.xlsx')
 OUTPUT_COUNTS_FILE = os.path.join(OUTPUT_DIR, 'conteo_estudiantes.csv')
+CLEANED_FILE = os.path.join(DATA_DIR, 'datos_limpios.csv')
 
 # Reglas de equipos
 AREA_SISTEMAS = "Sistemas de Información"
