@@ -5,8 +5,8 @@ Capa de preprocesamiento: normalización de nombres de carreras.
 
 Ejecuta ANTES de data_loader. Lee el CSV original, mapea todas las
 variantes ortográficas y de escritura a un nombre canónico único por
-carrera, y guarda el resultado como un CSV limpio en la misma carpeta
-data/ con el sufijo _limpio.
+carrera, elimina estudiantes cuyo año sea "Otro" (no válidos para el
+concurso), y guarda el resultado como un CSV limpio en data/datos_limpios.csv.
 
 Nombres canónicos definidos:
   Área Sistemas de Información:
@@ -191,10 +191,37 @@ def run_cleaner() -> str:
         if eliminados_c:
             print(f"  [WARN] Duplicados de carnet eliminados: {eliminados_c}")
 
-    # 8. Resumen de carreras canonizadas
+    # 8. Eliminar estudiantes con año "Otro" (no aplican al concurso)
+    ano_col = next(
+        (col for col in df.columns if col.strip().lower() == 'año'),
+        None
+    )
+    if ano_col:
+        antes_otro = len(df)
+        df_otro = df[df[ano_col].astype(str).str.strip() == 'Otro']
+        if len(df_otro) > 0:
+            print(f"\n  Estudiantes con anno 'Otro' eliminados ({len(df_otro)}):")
+            nombre_col_display = next(
+                (col for col in df.columns if 'Nombre completo' in col), None
+            )
+            for _, row in df_otro.iterrows():
+                nombre_d = row[nombre_col_display].strip() if nombre_col_display else 'N/A'
+                carrera_d = row[carrera_col].strip() if pd.notnull(row[carrera_col]) else 'N/A'
+                print(f"    - {nombre_d}  ({carrera_d})")
+            df = df[df[ano_col].astype(str).str.strip() != 'Otro'].copy()
+            print(f"  Registros tras eliminar 'Otro': {len(df)}")
+        else:
+            print("\n  Sin estudiantes con anno 'Otro'.")
+
+    # 9. Resumen de carreras canonizadas
     print(f"\n  Carreras canonicas resultantes:")
     for carrera, n in df[carrera_col].value_counts().items():
         print(f"    {n:3}  {carrera}")
+
+    # Resumen por año
+    print(f"\n  Distribucion por anno universitario:")
+    for ano_v, n in df[ano_col].value_counts().sort_index().items() if ano_col else []:
+        print(f"    {n:3}  {ano_v}")
 
     print(f"\n  Registros limpios finales: {len(df)}")
 

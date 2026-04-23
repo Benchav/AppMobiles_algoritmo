@@ -277,7 +277,7 @@ def export_teams(teams_df: pd.DataFrame):
 
     for row_idx, record in enumerate(teams_df.itertuples(index=False), start=3):
         equipo = record.Equipo
-        area   = record.Área if hasattr(record, 'Área') else record.Area
+        area   = getattr(record, 'Area', 'Otra')
 
         # Detectar cambio de equipo → separador visual
         if equipo != current_team:
@@ -297,7 +297,7 @@ def export_teams(teams_df: pd.DataFrame):
         bg = area_fill if not fill_alternado else _lighten(area_fill)
 
         row_data = [equipo, record._1, record.Nombre, record.Carnet,
-                    record.Carrera, record.Área, record.Año]
+                    record.Carrera, getattr(record, 'Area', ''), record.Año]
 
         for col_idx, val in enumerate(row_data, start=1):
             c = ws.cell(row=row_idx, column=col_idx, value=str(val) if val else '')
@@ -338,7 +338,7 @@ def export_teams(teams_df: pd.DataFrame):
                 .apply(
                     lambda g: pd.Series({
                         'Total Integrantes': len(g),
-                        'Areas Representadas': ', '.join(sorted(g['Área'].dropna().unique())),
+                        'Areas Representadas': ', '.join(sorted(g['Area'].dropna().unique())),
                         'Carreras': ', '.join(sorted(g['Carrera'].dropna().unique())),
                     }),
                     include_groups=False
@@ -384,7 +384,7 @@ def export_teams(teams_df: pd.DataFrame):
     total_est = len(teams_df['Nombre'].unique()) if not teams_df.empty else 1
     alt = False
     row_pos = 3
-    for area_val, grp in teams_df.groupby('Área'):
+    for area_val, grp in teams_df.groupby('Area'):
         area_bg = TEAM_ROW_FILLS.get(area_val, 'F8FAFC')
         for carrera_val, cgrp in grp.groupby('Carrera'):
             for año_val, agrp in cgrp.groupby('Año'):
