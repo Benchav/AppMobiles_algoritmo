@@ -27,7 +27,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 from src.config import (
     AREA_ECONOMICAS, AREA_HUMANIDADES, AREA_INGENIERIA, AREA_SISTEMAS,
-    OUTPUT_COUNTS_FILE, OUTPUT_DIR, OUTPUT_TEAMS_FILE,
+    OUTPUT_COUNTS_FILE, OUTPUT_DIR, OUTPUT_TEAMS_FILE, CLEANED_FILE,
 )
 
 # ── Paleta de colores para áreas ────────────────────────────────────────────
@@ -417,6 +417,53 @@ def export_teams(teams_df: pd.DataFrame):
 
     wb.save(OUTPUT_TEAMS_FILE)
     print(f"  [OK] Excel profesional exportado: {OUTPUT_TEAMS_FILE}")
+
+    # ── Hoja opcional: No asignados (inscritos válidos pero no presentes en equipos)
+    try:
+        if CLEANED_FILE and os.path.exists(CLEANED_FILE):
+            try:
+                df_clean = pd.read_csv(CLEANED_FILE, sep=';', encoding='utf-8')
+            except UnicodeDecodeError:
+                df_clean = pd.read_csv(CLEANED_FILE, sep=';', encoding='latin1')
+
+            # localizar columnas relevantes
+            carnet_col_clean = next((c for c in df_clean.columns if 'carnet' in str(c).lower()), None)
+            nombre_col_clean = next((c for c in df_clean.columns if 'nombre' in str(c).lower()), None)
+
+            # columnas en teams_df
+            teams_carnet_col = next((c for c in teams_df.columns if 'carnet' in str(c).lower()), None)
+            teams_nombre_col = next((c for c in teams_df.columns if 'nombre' in str(c).lower()), None)
+
+            no_asig = None
+            if teams_carnet_col and carnet_col_clean:
+                assigned = set(teams_df[teams_carnet_col].astype(str).str.strip().str.lower())
+                mask = ~df_clean[carnet_col_clean].astype(str).str.strip().str.lower().isin(assigned)
+                no_asig = df_clean.loc[mask]
+            elif teams_nombre_col and nombre_col_clean:
+                assigned = set(teams_df[teams_nombre_col].astype(str).str.strip().str.lower())
+                mask = ~df_clean[nombre_col_clean].astype(str).str.strip().str.lower().isin(assigned)
+                no_asig = df_clean.loc[mask]
+
+            if no_asig is not None:
+                ws_no = wb.create_sheet(title='No asignados')
+                if no_asig.empty:
+                    ws_no.append(['No hay estudiantes sin asignar.'])
+                else:
+                    # seleccionar columnas útiles si existen
+                    cols = []
+                    for c in (nombre_col_clean, carnet_col_clean, 'Carrera', 'Carrera_Normalizada', 'Año'):
+                        if c and c in no_asig.columns and c not in cols:
+                            cols.append(c)
+                    if not cols:
+                        cols = list(no_asig.columns)
+                    # escribir encabezado y filas
+                    for r in dataframe_to_rows(no_asig[cols], index=False, header=True):
+                        ws_no.append(r)
+                # guardar nuevamente para incluir la hoja nueva
+                wb.save(OUTPUT_TEAMS_FILE)
+                print(f"  [OK] Hoja 'No asignados' añadida al Excel: {OUTPUT_TEAMS_FILE}")
+    except Exception as exc:
+        print(f"  [WARN] No se pudo generar la hoja 'No asignados': {exc}")
 
 
 def _lighten(hex_color: str, factor: float = 0.85) -> str:
