@@ -20,11 +20,17 @@ from src.data_cleaner import run_cleaner
 from src.data_loader import load_and_clean_data
 from src.team_builder import build_teams
 from src.exporter import export_counts, export_teams
-from src.config import OUTPUT_DIR
+from src.config import OUTPUT_DIR, INPUT_FILE
 
 
 def main():
     print("Iniciando algoritmo de conformacion de equipos...")
+
+    # Verificar existencia de archivo de entrada antes de comenzar
+    if not INPUT_FILE or not os.path.exists(INPUT_FILE):
+        print("\n[ERROR] No se encontró el archivo de inscripciones en la carpeta data/.\n"
+              "Por favor coloca el CSV de inscripciones dentro de data/ y asegúrate de que no sea 'datos_limpios.csv'.\n")
+        sys.exit(1)
 
     # ── Paso 1: Limpieza y normalizacion de carreras ─────────────────────────
     cleaned_path = run_cleaner()

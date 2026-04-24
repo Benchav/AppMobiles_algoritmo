@@ -115,7 +115,10 @@ def generate_charts(df: pd.DataFrame) -> list[str]:
     fig, ax = plt.subplots(figsize=(12, 7), facecolor='#0F172A')
     ax.set_facecolor('#1E293B')
     ax.tick_params(colors='white')
-    ax.spines[:].set_color('#334155')
+    # ax.spines is a dict-like mapping of spine name -> Spine instance
+    # iterar sobre los spines y fijar el color (evita usar un slicing inválido)
+    for spine in ax.spines.values():
+        spine.set_color('#334155')
 
     YEAR_COLORS = {3: '#38BDF8', 4: '#818CF8', 5: '#34D399', 0: '#94A3B8'}
 
@@ -163,7 +166,8 @@ def generate_charts(df: pd.DataFrame) -> list[str]:
     fig, ax = plt.subplots(figsize=(12, max(6, len(carrera_counts) * 0.55 + 2)),
                            facecolor='#0F172A')
     ax.set_facecolor('#1E293B')
-    ax.spines[:].set_color('#334155')
+    for spine in ax.spines.values():
+        spine.set_color('#334155')
 
     bars = ax.barh(labels_wrap, carrera_counts['n'], color=bar_colors,
                    edgecolor='#0F172A', linewidth=0.5, zorder=3)
@@ -245,6 +249,10 @@ def _header_style(ws, cell, text, fg='1E3A5F', color='FFFFFF', size=11, bold=Tru
 
 def export_teams(teams_df: pd.DataFrame):
     """Exporta equipos conformados a Excel con diseño profesional."""
+    # Protección: si no hay datos, evitar crear un Excel vacío o con errores
+    if teams_df is None or teams_df.empty:
+        print("  [WARN] export_teams: No hay datos de equipos para exportar. Se omitirá la generación del Excel.")
+        return
     wb = Workbook()
 
     # ── Hoja 1: Todos los equipos ────────────────────────────────────────────
