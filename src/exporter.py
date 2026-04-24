@@ -28,6 +28,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from src.config import (
     AREA_ECONOMICAS, AREA_HUMANIDADES, AREA_INGENIERIA, AREA_SISTEMAS,
     OUTPUT_COUNTS_FILE, OUTPUT_DIR, OUTPUT_TEAMS_FILE, CLEANED_FILE,
+    get_area_from_major,
 )
 
 # ── Paleta de colores para áreas ────────────────────────────────────────────
@@ -438,28 +439,111 @@ def export_teams(teams_df: pd.DataFrame):
             if teams_carnet_col and carnet_col_clean:
                 assigned = set(teams_df[teams_carnet_col].astype(str).str.strip().str.lower())
                 mask = ~df_clean[carnet_col_clean].astype(str).str.strip().str.lower().isin(assigned)
-                no_asig = df_clean.loc[mask]
+                no_asig = df_clean.loc[mask].reset_index(drop=True)
             elif teams_nombre_col and nombre_col_clean:
                 assigned = set(teams_df[teams_nombre_col].astype(str).str.strip().str.lower())
                 mask = ~df_clean[nombre_col_clean].astype(str).str.strip().str.lower().isin(assigned)
-                no_asig = df_clean.loc[mask]
+                no_asig = df_clean.loc[mask].reset_index(drop=True)
 
             if no_asig is not None:
                 ws_no = wb.create_sheet(title='No asignados')
-                if no_asig.empty:
-                    ws_no.append(['No hay estudiantes sin asignar.'])
-                else:
-                    # seleccionar columnas útiles si existen
-                    cols = []
-                    for c in (nombre_col_clean, carnet_col_clean, 'Carrera', 'Carrera_Normalizada', 'Año'):
-                        if c and c in no_asig.columns and c not in cols:
-                            cols.append(c)
-                    if not cols:
-                        cols = list(no_asig.columns)
-                    # escribir encabezado y filas
-                    for r in dataframe_to_rows(no_asig[cols], index=False, header=True):
-                        ws_no.append(r)
-                # guardar nuevamente para incluir la hoja nueva
+                ws_no.sheet_view.showGridLines = False
+
+                # Título
+                ws_no.merge_cells('A1:E1')
+                t = ws_no['A1']
+                t.value = 'Estudiantes No Asignados'
+                t.font = Font(bold=True, size=13, color='FFFFFF')
+                t.fill = PatternFill('solid', fgColor='0F172A')
+                t.alignment = Alignment(horizontal='center', vertical='center')
+                ws_no.row_dimensions[1].height = 28
+
+                # Resumen breve: total y desglose por área
+                try:
+                    import pandas as _pd
+                    def _area_of_row(r):
+                        carrera_val = None
+                        if 'Carrera' in no_asig.columns:
+                            carrera_val = r['Carrera']
+                        elif 'Carrera_Normalizada' in no_asig.columns:
+                            carrera_val = r['Carrera_Normalizada']
+                        if _pd.isna(carrera_val):
+                            return 'Otra'
+                        return get_area_from_major(carrera_val)
+
+                    area_counts = {}
+                    for _, r in no_asig.iterrows():
+                        a = _area_of_row(r)
+                        area_counts[a] = area_counts.get(a, 0) + 1
+
+                    summary_parts = [f'Total no asignados: {len(no_asig)}']
+                    if area_counts:
+                        summary_parts.append('Por área: ' + ', '.join(f'{k}={v}' for k, v in area_counts.items()))
+                    summary_text = '  —  '.join(summary_parts)
+                except Exception:
+                    summary_text = f'Total no asignados: {len(no_asig)}'
+
+                ws_no.merge_cells('A2:E2')
+                s = ws_no['A2']
+                s.value = summary_text
+                s.font = Font(name='Calibri', size=11, color='FFFFFF')
+                s.fill = PatternFill('solid', fgColor='0F172A')
+                s.alignment = Alignment(horizontal='center', vertical='center')
+                ws_no.row_dimensions[2].height = 20
+
+                # Columnas a mostrar (ordenadas)
+                cols = []
+                for c in (nombre_col_clean, carnet_col_clean, 'Carrera', 'Carrera_Normalizada', 'Año'):
+                    if c and c in no_asig.columns and c not in cols:
+                        cols.append(c)
+                if not cols:
+                    cols = list(no_asig.columns)
+
+                # Encabezados (fila 3, tras el resumen)
+                header_colors = ['1E3A5F'] * len(cols)
+                for col_idx, (h, fg) in enumerate(zip(cols, header_colors), start=1):
+                    c = ws_no.cell(row=3, column=col_idx)
+                    _header_style(ws_no, c, h, fg=fg)
+                ws_no.row_dimensions[3].height = 20
+
+                # Filas con alternado y color por area si es posible (datos a partir de fila 4)
+                fill_alternado = False
+                # Iterar por filas tomando los valores en el mismo orden que 'cols'
+                for row_idx, row in enumerate(no_asig[cols].itertuples(index=False, name=None), start=4):
+                    fill_alternado = not fill_alternado
+                    # obtener area a partir de la Carrera si es posible
+                    # usamos la serie en la fila original para inferir la carrera
+                    # (no_asig[cols] mantiene el orden de columnas)
+                    # localizar columna de carrera en cols si existe
+                    try:
+                        carrera_idx = cols.index('Carrera') if 'Carrera' in cols else (cols.index('Carrera_Normalizada') if 'Carrera_Normalizada' in cols else None)
+                    except ValueError:
+                        carrera_idx = None
+
+                    carrera_val = None
+                    if carrera_idx is not None:
+                        carrera_val = row[carrera_idx]
+
+                    area_val = get_area_from_major(carrera_val) if carrera_val is not None else None
+                    area_bg = TEAM_ROW_FILLS.get(area_val, 'F8FAFC') if area_val else 'FFFFFF'
+                    bg = area_bg if not fill_alternado else _lighten(area_bg)
+
+                    for col_idx, val in enumerate(row, start=1):
+                        display = '' if pd.isna(val) else val
+                        cell_value = str(display) if display != '' else ''
+                        c = ws_no.cell(row=row_idx, column=col_idx, value=cell_value)
+                        c.font = Font(name='Calibri', size=10)
+                        c.fill = PatternFill('solid', fgColor=bg)
+                        c.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+                        c.border = _thin_border()
+                    ws_no.row_dimensions[row_idx].height = 18
+
+                # Anchos de columnas razonables
+                widths = [38, 18, 38, 12, 10]
+                for i, w in enumerate(widths[:len(cols)], start=1):
+                    ws_no.column_dimensions[get_column_letter(i)].width = w
+
+                # Guardar para incluir la hoja nueva
                 wb.save(OUTPUT_TEAMS_FILE)
                 print(f"  [OK] Hoja 'No asignados' añadida al Excel: {OUTPUT_TEAMS_FILE}")
     except Exception as exc:
