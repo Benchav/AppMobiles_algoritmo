@@ -26,10 +26,7 @@ import random
 import time
 
 import pandas as pd
-from src.config import AREA_SISTEMAS, AREA_INGENIERIA, AREA_ECONOMICAS, AREA_HUMANIDADES
-
-# Tamaño objetivo de cada equipo (6 integrantes según nueva regla)
-TEAM_SIZE = 6
+from src.config import AREA_SISTEMAS, AREA_INGENIERIA, AREA_ECONOMICAS, AREA_HUMANIDADES, TEAM_SIZE
 
 
 def build_teams(df: pd.DataFrame) -> pd.DataFrame:

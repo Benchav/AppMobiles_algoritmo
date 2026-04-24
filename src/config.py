@@ -25,6 +25,9 @@ AREA_INGENIERIA = "Otra Ingeniería"
 AREA_ECONOMICAS = "Ciencias Económicas"
 AREA_HUMANIDADES = "Ciencias Humanidades y Educación"
 
+# Tamaño por defecto de cada equipo (configurable)
+TEAM_SIZE = 6
+
 def normalize_string(s):
     if not isinstance(s, str):
         return ""
