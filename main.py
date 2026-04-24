@@ -21,6 +21,8 @@ from src.data_loader import load_and_clean_data
 from src.team_builder import build_teams
 from src.exporter import export_counts, export_teams
 from src.config import OUTPUT_DIR, INPUT_FILE
+from src.tutors import maybe_generate_tutors_if_missing, read_tutors, generate_tutors
+from src.config import TUTORS_FILE, TUTOR_CARNET_START
 
 
 def main():
@@ -50,6 +52,28 @@ def main():
     # ── Paso 4: Conformacion de equipos ──────────────────────────────────────
     print("\nGenerando equipos aleatorios con reglas establecidas...")
     teams_df = build_teams(df)
+
+    # ── Asignar tutores a cada equipo (solo si hay equipos)
+    if teams_df is not None and not teams_df.empty:
+        n_teams = teams_df['Equipo'].nunique()
+        # generar archivo de tutores solo si NO existe
+        maybe_generate_tutors_if_missing(n_teams)
+
+        tutors_df = read_tutors()
+        # si el archivo existe pero está vacío, generamos n_teams tutores para poder asignar
+        if tutors_df.empty:
+            tutors_df = generate_tutors(n_teams, start=TUTOR_CARNET_START, path=TUTORS_FILE)
+
+        # asignación aleatoria: si hay menos tutores que equipos permitimos reemplazo
+        replace = len(tutors_df) < n_teams
+        chosen = tutors_df.sample(n=n_teams, replace=replace).reset_index(drop=True)
+
+        # mapear cada equipo (en orden de aparición) a un tutor
+        equipos_orden = list(dict.fromkeys(teams_df['Equipo'].tolist()))
+        mapping_name = dict(zip(equipos_orden, chosen['Nombre'].astype(str)))
+        mapping_carnet = dict(zip(equipos_orden, chosen['Carnet'].astype(str)))
+        teams_df['Tutor'] = teams_df['Equipo'].map(mapping_name)
+        teams_df['Tutor_Carnet'] = teams_df['Equipo'].map(mapping_carnet)
 
     # ── Paso 5: Exportar Excel ────────────────────────────────────────────────
     print("\nExportando equipos a Excel...")

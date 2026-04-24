@@ -271,9 +271,9 @@ def export_teams(teams_df: pd.DataFrame):
     title_cell.alignment = Alignment(horizontal='center', vertical='center')
     ws.row_dimensions[1].height = 30
 
-    # Fila 2: Encabezados
-    headers = ['Equipo', '#', 'Nombre Completo', 'Carnet', 'Carrera', 'Área', 'Año']
-    header_colors = ['1E3A5F', '1E3A5F', '1E3A5F', '1E3A5F', '1E3A5F', '1E3A5F', '1E3A5F']
+    # Fila 2: Encabezados (añadimos Tutor y Carnet Tutor)
+    headers = ['Equipo', '#', 'Nombre Completo', 'Carnet', 'Carrera', 'Área', 'Año', 'Tutor', 'Carnet Tutor']
+    header_colors = ['1E3A5F'] * len(headers)
     for col_idx, (h, fg) in enumerate(zip(headers, header_colors), start=1):
         c = ws.cell(row=2, column=col_idx)
         _header_style(ws, c, h, fg=fg)
@@ -306,7 +306,8 @@ def export_teams(teams_df: pd.DataFrame):
         bg = area_fill if not fill_alternado else _lighten(area_fill)
 
         row_data = [equipo, record._1, record.Nombre, record.Carnet,
-                    record.Carrera, getattr(record, 'Area', ''), record.Año]
+                    record.Carrera, getattr(record, 'Area', ''), record.Año,
+                    getattr(record, 'Tutor', ''), getattr(record, 'Tutor_Carnet', '')]
 
         for col_idx, val in enumerate(row_data, start=1):
             c = ws.cell(row=row_idx, column=col_idx, value=str(val) if val else '')
@@ -320,8 +321,8 @@ def export_teams(teams_df: pd.DataFrame):
 
         ws.row_dimensions[row_idx].height = 18
 
-    # Anchos de columnas
-    col_widths = [16, 5, 38, 18, 38, 30, 10]
+    # Anchos de columnas (agregados para Tutor y Carnet Tutor)
+    col_widths = [16, 5, 38, 18, 38, 30, 10, 30, 18]
     for i, w in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
@@ -337,7 +338,8 @@ def export_teams(teams_df: pd.DataFrame):
     t.alignment = Alignment(horizontal='center', vertical='center')
     ws2.row_dimensions[1].height = 28
 
-    res_headers = ['Equipo', 'Total Integrantes', 'Áreas Representadas', 'Carreras']
+    # Resumen por equipo: añadimos Tutor y Carnet Tutor
+    res_headers = ['Equipo', 'Total Integrantes', 'Áreas Representadas', 'Carreras', 'Tutor', 'Carnet Tutor']
     for ci, h in enumerate(res_headers, start=1):
         c = ws2.cell(row=2, column=ci)
         _header_style(ws2, c, h)
@@ -349,6 +351,8 @@ def export_teams(teams_df: pd.DataFrame):
                         'Total Integrantes': len(g),
                         'Areas Representadas': ', '.join(sorted(g['Area'].dropna().unique())),
                         'Carreras': ', '.join(sorted(g['Carrera'].dropna().unique())),
+                        'Tutor': (g['Tutor'].dropna().unique()[0] if 'Tutor' in g.columns and not g['Tutor'].dropna().empty else ''),
+                        'Carnet Tutor': (g['Tutor_Carnet'].dropna().unique()[0] if 'Tutor_Carnet' in g.columns and not g['Tutor_Carnet'].dropna().empty else ''),
                     }),
                     include_groups=False
                 )
@@ -383,7 +387,7 @@ def export_teams(teams_df: pd.DataFrame):
             c.border = _thin_border()
         ws2.row_dimensions[ri].height = 20
 
-    for ci, w in enumerate([16, 16, 55, 70], start=1):
+    for ci, w in enumerate([16, 16, 55, 70, 30, 18], start=1):
         ws2.column_dimensions[get_column_letter(ci)].width = w
 
     # ── Hoja 3: Estadísticas ─────────────────────────────────────────────────

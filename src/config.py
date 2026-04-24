@@ -28,6 +28,10 @@ AREA_HUMANIDADES = "Ciencias Humanidades y Educación"
 # Tamaño por defecto de cada equipo (configurable)
 TEAM_SIZE = 6
 
+# Tutores (archivo por defecto en data/)
+TUTORS_FILE = os.path.join(DATA_DIR, 'tutores.csv')
+# Carnet inicial para tutores generados automáticamente
+TUTOR_CARNET_START = 90000001
 def normalize_string(s):
     if not isinstance(s, str):
         return ""
