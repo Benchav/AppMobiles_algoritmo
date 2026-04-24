@@ -354,6 +354,19 @@ def export_teams(teams_df: pd.DataFrame):
                 )
     )
 
+    # Ordenar numéricamente por el número del equipo cuando el nombre contiene dígitos
+    # Ej: 'Equipo 1', 'Equipo 2', ..., 'Equipo 10' -> order ascendente por 1..10
+    try:
+        if 'Equipo' in resumen.columns:
+            nums = pd.to_numeric(resumen['Equipo'].astype(str)
+                                  .str.extract(r"(\d+)", expand=False), errors='coerce')
+            if nums.notna().any():
+                resumen['__EquipoNum'] = nums.fillna(10**9).astype(int)
+                resumen = resumen.sort_values('__EquipoNum').drop(columns='__EquipoNum').reset_index(drop=True)
+    except Exception:
+        # No fallar si algo inesperado ocurre; dejar el orden original
+        pass
+
     alt = False
     for ri, row in enumerate(resumen.itertuples(index=False), start=3):
         alt = not alt
