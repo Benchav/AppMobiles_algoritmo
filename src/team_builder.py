@@ -3,14 +3,16 @@ team_builder.py
 ---------------
 Capa de logica de negocio: conformacion de equipos multidisciplinarios.
 
-Reglas obligatorias por equipo (5 integrantes ideales):
-  • 2 de Ingenieria en Sistemas de Informacion (4to o 5to anno)
+Reglas obligatorias por equipo (6 integrantes ideales):
+  • 2 de Ingenieria en Sistemas de Informacion (4to o 5to año)
   • 1 de Otra Ingenieria (Industrial o Telematica)
   • 1 de Ciencias Economicas
   • 1 de Ciencias Humanidades y Educacion
+  • 1 integrante adicional (filler) elegido para completar el equipo
+    procurando balance entre areas y carreras.
 
 Prioridad de formacion:
-  - Equipos COMPLETOS (5 integrantes) primero.
+  - Equipos COMPLETOS (6 integrantes) primero.
   - Si alguna area se agota, se forman equipos parciales con los disponibles.
   - Los 3 roles OBLIGATORIOS son: 2xSistemas + 1xOtraIngenieria.
     Sin esos 3, no se forma equipo.
@@ -26,10 +28,13 @@ import time
 import pandas as pd
 from src.config import AREA_SISTEMAS, AREA_INGENIERIA, AREA_ECONOMICAS, AREA_HUMANIDADES
 
+# Tamaño objetivo de cada equipo (6 integrantes según nueva regla)
+TEAM_SIZE = 6
+
 
 def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Genera equipos de hasta 5 integrantes siguiendo las reglas multidisciplinarias.
+    Genera equipos de hasta TEAM_SIZE integrantes siguiendo las reglas multidisciplinarias.
     Prioriza equipos COMPLETOS. Los 3 roles base (2xSistemas + 1xIngenieria)
     son obligatorios para que se forme un equipo.
 
@@ -74,16 +79,18 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     n_eco = len(pool_eco)
     n_hum = len(pool_hum)
 
-    # Equipos completos posibles con los 4 roles
-    equipos_completos_posibles = min(n_sis // 2, n_ing, n_eco, n_hum)
-    equipos_base_posibles      = min(n_sis // 2, n_ing)
+    total_available = n_sis + n_ing + n_eco + n_hum
+
+    # Equipos completos posibles considerando los roles obligatorios y el tamaño
+    equipos_completos_posibles = min(n_sis // 2, n_ing, n_eco, n_hum, total_available // TEAM_SIZE)
+    equipos_base_posibles = min(n_sis // 2, n_ing)
 
     print(f"\n  Disponibles por area:")
-    print(f"    - Sistemas de Informacion (4to/5to anno): {n_sis}")
+    print(f"    - Sistemas de Informacion (4to/5to año): {n_sis}")
     print(f"    - Otra Ingenieria:                        {n_ing}")
     print(f"    - Ciencias Economicas:                    {n_eco}")
     print(f"    - Humanidades y Educacion:                {n_hum}")
-    print(f"\n  Equipos completos (5 integrantes) posibles: {equipos_completos_posibles}")
+    print(f"\n  Equipos completos ({TEAM_SIZE} integrantes) posibles: {equipos_completos_posibles}")
     print(f"  Equipos base   (min 3 integrantes) posibles: {equipos_base_posibles}")
 
     # ── Formacion de equipos ──────────────────────────────────────────────────
@@ -104,7 +111,7 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
         idx_sis += 2
         idx_ing += 1
 
-        # ── Rol Economicas (opcional pero prioritario para llegar a 5) ───────
+        # ── Rol Economicas (opcional pero prioritario)
         if idx_eco < len(pool_eco):
             candidatos.append((pool_eco, idx_eco))
             idx_eco += 1
@@ -113,6 +120,31 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
         if idx_hum < len(pool_hum):
             candidatos.append((pool_hum, idx_hum))
             idx_hum += 1
+
+        # Rellenar hasta TEAM_SIZE el equipo eligiendo de la pool con más remanente
+        while len(candidatos) < TEAM_SIZE:
+            remain = {
+                'sis': len(pool_sis) - idx_sis,
+                'ing': len(pool_ing) - idx_ing,
+                'eco': len(pool_eco) - idx_eco,
+                'hum': len(pool_hum) - idx_hum,
+            }
+            # seleccionar la area con mayor remanente
+            area_choice, area_count = max(remain.items(), key=lambda kv: kv[1])
+            if area_count <= 0:
+                break
+            if area_choice == 'sis':
+                candidatos.append((pool_sis, idx_sis))
+                idx_sis += 1
+            elif area_choice == 'ing':
+                candidatos.append((pool_ing, idx_ing))
+                idx_ing += 1
+            elif area_choice == 'eco':
+                candidatos.append((pool_eco, idx_eco))
+                idx_eco += 1
+            else:
+                candidatos.append((pool_hum, idx_hum))
+                idx_hum += 1
 
         equipos_list.append(candidatos)
 
@@ -151,10 +183,10 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
 
     # Calcular cuantos equipos nuevos necesitamos
     total_leftovers = len(leftovers)
-    slots_in_base = sum(5 - len(eq) for eq in equipos_list)
+    slots_in_base = sum(TEAM_SIZE - len(eq) for eq in equipos_list)
     if total_leftovers > slots_in_base:
         remaining = total_leftovers - slots_in_base
-        new_teams_count = math.ceil(remaining / 5)
+        new_teams_count = math.ceil(remaining / TEAM_SIZE)
         for _ in range(new_teams_count):
             equipos_list.append([])
 
@@ -162,7 +194,7 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     for carrera in sorted_careers:
         students = leftovers_by_career[carrera]
         for student in students:
-            valid_teams = [eq for eq in equipos_list if len(eq) < 5]
+            valid_teams = [eq for eq in equipos_list if len(eq) < TEAM_SIZE]
             if not valid_teams:
                 # Fallback por si acaso (no deberia pasar con el math.ceil)
                 equipos_list[-1].append(student)
@@ -211,19 +243,19 @@ def build_teams(df: pd.DataFrame) -> pd.DataFrame:
     total_asignados  = len(registros)
     completos = sum(
         1 for eq in pd.DataFrame(registros).groupby('Equipo').size()
-        if eq == 5
+        if eq == TEAM_SIZE
     ) if registros else 0
     parciales = total_equipos - completos
 
     print(f"\n  Resultado:")
     print(f"    Equipos conformados:   {total_equipos}")
-    print(f"    Equipos completos (5): {completos}")
+    print(f"    Equipos completos ({TEAM_SIZE}): {completos}")
     print(f"    Equipos parciales:     {parciales}")
     print(f"    Estudiantes asignados: {total_asignados}")
 
     if n_eco == 0:
         print("\n  [AVISO] No hay inscritos de Ciencias Economicas.")
-        print("          Para equipos completos de 5, se requieren estudiantes de esa area.")
+        print(f"          Para equipos completos de {TEAM_SIZE}, se requieren estudiantes de esa area.")
     if n_hum < total_equipos:
         print(f"\n  [AVISO] Humanidades ({n_hum}) no alcanza para todos los equipos ({total_equipos}).")
 

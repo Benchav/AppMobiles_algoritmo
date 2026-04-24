@@ -3,7 +3,7 @@
 meter 2 de sistemas y 2 ingenieros mas por cada equipo + uno de ciencias economicas y 1 de humanidades
 
 
-Este proyecto automatiza la conformacion de equipos de trabajo multidisciplinarios garantizando un balance equitativo de conocimientos y areas de especialidad academica. El algoritmo ingiere un archivo CSV con las inscripciones, limpia y normaliza los datos, y distribuye a los estudiantes en equipos de hasta 5 integrantes bajo reglas de negocio estrictas.
+Este proyecto automatiza la conformacion de equipos de trabajo multidisciplinarios garantizando un balance equitativo de conocimientos y areas de especialidad academica. El algoritmo ingiere un archivo CSV con las inscripciones, limpia y normaliza los datos, y distribuye a los estudiantes en equipos de hasta 6 integrantes bajo reglas de negocio estrictas.
 
 --- del numero 90 en adelante son datos sinteticos para completar el archivo---
 
@@ -111,11 +111,12 @@ El algoritmo esta diseñado para tratar la informacion de manera inmutable, pasa
 
 ## Reglas de Formacion de Equipos
 
-El algoritmo obliga a la siguiente distribucion base para un equipo optimo de **5 integrantes**:
+El algoritmo obliga a la siguiente distribucion base para un equipo optimo de **6 integrantes**:
 - **2 Estudiantes:** Ingenieria en Sistemas de Informacion (Exclusivamente de 4to o 5to año).
 - **1 Estudiante:** Otra disciplina ingenieril (ej. Industrial o Telematica).
 - **1 Estudiante:** Ciencias Economicas.
 - **1 Estudiante:** Ciencias de Humanidades y Educacion (ej. Psicologia o Fisica-Matematica).
+- **1 Estudiante:** Integrante adicional (filler) para completar el equipo, elegido aleatoriamente procurando balance.
 
 *Nota: El algoritmo garantiza combinaciones unicas entre corridas gracias a su factorizacion de aleatoriedad por tiempo. Si hay escasez en alguna area, el sistema prioriza a los integrantes base (Sistemas y Otras Ingenierias) antes de abortar un equipo.*
 
