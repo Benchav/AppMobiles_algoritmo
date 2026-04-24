@@ -32,6 +32,29 @@ python main.py
 
 ---
 
+### 4. Limpieza de archivos generados
+
+Si quieres eliminar los artefactos que genera el pipeline (gráficos, CSVs y el Excel) y el CSV intermedio de limpieza, usa el script dedicado `clean.py` desde la raíz del proyecto.
+
+- Modo interactivo (pregunta antes de eliminar):
+
+```bash
+python clean.py
+```
+
+- Modo no interactivo (elimina sin preguntar):
+
+```bash
+python clean.py -y
+```
+
+Qué elimina:
+- Todos los archivos `*.csv`, `*.xlsx` y `*.png` dentro de la carpeta `datos/` (OUTPUT_DIR).
+- El archivo `data/datos_limpios.csv` (CLEANED_FILE).
+
+Precauciones: Esta operación borra los archivos de forma permanente. Asegúrate de tener respaldo si necesitas conservar los resultados.
+
+
 ## Estructura del Proyecto
 
 ```text
