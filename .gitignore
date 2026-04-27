@@ -1,0 +1,3 @@
+# Ignorar archivos CSV en la carpeta data
+/data/*.csv
+/data/**/*.csv
